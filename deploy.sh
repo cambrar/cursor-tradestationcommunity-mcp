@@ -136,7 +136,8 @@ install_system_deps() {
         "amzn")
             # Amazon Linux 2023
             yum update -y
-            yum install -y python3 python3-pip python3-venv git curl wget systemd
+            # Install python3 and development tools (venv module is included in python3)
+            yum install -y python3 python3-pip python3-devel git curl wget systemd
             ;;
         "ubuntu")
             # Ubuntu
@@ -152,9 +153,9 @@ install_system_deps() {
     log_success "System dependencies installed"
 }
 
-# Check Python version
+# Check Python version and venv availability
 check_python_version() {
-    log_info "Checking Python version..."
+    log_info "Checking Python version and venv availability..."
     
     if ! command -v python3 &> /dev/null; then
         log_error "python3 is not installed"
@@ -178,7 +179,21 @@ check_python_version() {
         fi
     fi
     
-    log_success "Python version check passed"
+    # Check if venv module is available
+    if ! python3 -m venv --help &> /dev/null; then
+        log_error "Python venv module is not available"
+        case $OS in
+            "amzn")
+                log_error "On Amazon Linux 2023, try: sudo yum install -y python3-devel"
+                ;;
+            "ubuntu")
+                log_error "On Ubuntu, try: sudo apt-get install -y python3-venv"
+                ;;
+        esac
+        exit 1
+    fi
+    
+    log_success "Python version and venv check passed"
 }
 
 # Create service user (only for system install)
