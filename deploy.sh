@@ -11,7 +11,7 @@ PROJECT_NAME="tradestation-community-mcp"
 PROJECT_DIR="/data/${PROJECT_NAME}"
 SERVICE_NAME="tradestation-community-mcp"
 SERVICE_USER="mcp-server"
-PYTHON_VERSION="3.9"  # Minimum required version
+PYTHON_VERSION="3.10"  # Minimum required version for MCP library
 
 # Deployment options
 INSTALL_SYSTEMD_SERVICE=false
@@ -136,8 +136,20 @@ install_system_deps() {
         "amzn")
             # Amazon Linux 2023
             yum update -y
-            # Install core packages first
-            yum install -y python3 python3-pip python3-devel git wget systemd
+            
+            # Try to install Python 3.11 first (compatible with MCP), fallback to python3
+            if yum list available python3.11 &> /dev/null; then
+                log_info "Installing Python 3.11 for MCP compatibility..."
+                yum install -y python3.11 python3.11-pip python3.11-devel git wget systemd
+                # Create symlinks for python3 if needed
+                if ! command -v python3 &> /dev/null || [[ "$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" < "3.10" ]]; then
+                    alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+                    alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip3.11 1
+                fi
+            else
+                log_warning "Python 3.11 not available, installing default python3"
+                yum install -y python3 python3-pip python3-devel git wget systemd
+            fi
             
             # Handle curl/curl-minimal conflict - only install if curl is not available
             if ! command -v curl &> /dev/null; then
@@ -182,7 +194,16 @@ check_python_version() {
         REQ_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
         
         if [[ $PYTHON_MAJOR -lt $REQ_MAJOR ]] || [[ $PYTHON_MAJOR -eq $REQ_MAJOR && $PYTHON_MINOR -lt $REQ_MINOR ]]; then
-            log_error "Python $PYTHON_VERSION or higher is required, but $PYTHON_INSTALLED_VERSION is installed"
+            log_error "Python $PYTHON_VERSION or higher is required for MCP library, but $PYTHON_INSTALLED_VERSION is installed"
+            case $OS in
+                "amzn")
+                    log_error "Try installing Python 3.11: sudo yum install -y python3.11 python3.11-pip python3.11-devel"
+                    log_error "Then create symlinks: sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1"
+                    ;;
+                "ubuntu")
+                    log_error "Try installing Python 3.11: sudo apt-get install -y python3.11 python3.11-pip python3.11-venv"
+                    ;;
+            esac
             exit 1
         fi
     fi
