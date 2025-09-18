@@ -7,7 +7,7 @@ set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
 # Configuration
 PROJECT_NAME="tradestation-community-mcp"
-PROJECT_DIR="/opt/${PROJECT_NAME}"
+PROJECT_DIR="/data/${PROJECT_NAME}"
 SERVICE_NAME="tradestation-community-mcp"
 SERVICE_USER="mcp-server"
 

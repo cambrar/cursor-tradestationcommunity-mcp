@@ -13,7 +13,7 @@
       "args": [
         "-i", "/path/to/your-key.pem",
         "ec2-user@your-ec2-ip",
-        "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+        "cd /data/tradestation-community-mcp && ./venv/bin/python server.py"
       ]
     },
     "tradestation-community-ec2-systemd": {

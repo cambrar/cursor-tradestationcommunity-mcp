@@ -71,7 +71,7 @@ sudo ./deploy.sh --systemd
 #### Configuration
 ```bash
 # For system install
-sudo nano /opt/tradestation-community-mcp/.env
+sudo nano /data/tradestation-community-mcp/.env
 
 # For user install  
 nano ~/.local/share/tradestation-community-mcp/.env
@@ -95,7 +95,7 @@ sudo systemctl restart tradestation-community-mcp
 #### Manual Execution (non-systemd)
 ```bash
 # Run manually
-cd /opt/tradestation-community-mcp  # or your install directory
+cd /data/tradestation-community-mcp  # or your install directory
 ./venv/bin/python server.py
 ```
 
@@ -145,7 +145,7 @@ cd /opt/tradestation-community-mcp  # or your install directory
          "args": [
            "-i", "/path/to/your-key.pem",
            "ec2-user@your-ec2-ip",
-           "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+           "cd /data/tradestation-community-mcp && ./venv/bin/python server.py"
          ]
        }
      }
@@ -206,7 +206,7 @@ Here's a complete example for connecting Cursor to an EC2 instance:
          "args": [
            "-i", "/Users/yourname/aws-keys/my-ec2-key.pem",
            "ec2-user@203.0.113.100",
-           "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+           "cd /data/tradestation-community-mcp && ./venv/bin/python server.py"
          ]
        }
      }
@@ -216,7 +216,7 @@ Here's a complete example for connecting Cursor to an EC2 instance:
 
 3. **Test the SSH connection first:**
    ```bash
-   ssh -i ~/aws-keys/my-ec2-key.pem ec2-user@203.0.113.100 "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py --help"
+   ssh -i ~/aws-keys/my-ec2-key.pem ec2-user@203.0.113.100 "cd /data/tradestation-community-mcp && ./venv/bin/python server.py --help"
    ```
 
 4. **Restart Cursor and test:**

@@ -15,8 +15,8 @@ cd /tmp/tradestation-mcp
 sudo ./deploy.sh
 
 # Configure and run manually
-sudo nano /opt/tradestation-community-mcp/.env
-cd /opt/tradestation-community-mcp
+sudo nano /data/tradestation-community-mcp/.env
+cd /data/tradestation-community-mcp
 sudo -u mcp-server ./venv/bin/python server.py
 ```
 
@@ -26,7 +26,7 @@ sudo -u mcp-server ./venv/bin/python server.py
 sudo ./deploy.sh --systemd
 
 # Configure credentials
-sudo nano /opt/tradestation-community-mcp/.env
+sudo nano /data/tradestation-community-mcp/.env
 sudo systemctl restart tradestation-community-mcp
 ```
 
@@ -137,7 +137,7 @@ sudo ./undeploy.sh
 
 ### Directory Structure
 ```
-/opt/tradestation-community-mcp/
+/data/tradestation-community-mcp/
 ├── server.py              # Main MCP server
 ├── requirements.txt       # Python dependencies
 ├── .env                   # Configuration (credentials)
@@ -151,7 +151,7 @@ sudo ./undeploy.sh
 ### Service Configuration
 - **Service Name**: `tradestation-community-mcp`
 - **Service User**: `mcp-server` (non-privileged)
-- **Working Directory**: `/opt/tradestation-community-mcp/`
+- **Working Directory**: `/data/tradestation-community-mcp/`
 - **Service File**: `/etc/systemd/system/tradestation-community-mcp.service`
 
 ### Security Features
@@ -408,7 +408,7 @@ sudo ./deploy.sh --systemd          # With systemd service
 ./deploy.sh --user                  # User installation
 
 # 4. Configure credentials
-sudo nano /opt/tradestation-community-mcp/.env  # System install
+sudo nano /data/tradestation-community-mcp/.env  # System install
 # or
 nano ~/.local/share/tradestation-community-mcp/.env  # User install
 
@@ -422,7 +422,7 @@ sudo systemctl start tradestation-community-mcp
 sudo systemctl status tradestation-community-mcp
 
 # For manual execution:
-cd /opt/tradestation-community-mcp
+cd /data/tradestation-community-mcp
 sudo -u mcp-server ./venv/bin/python server.py
 ```
 
@@ -447,7 +447,7 @@ sudo -u mcp-server ./venv/bin/python server.py
          "args": [
            "-i", "/path/to/your-key.pem",
            "ec2-user@your-ec2-ip", 
-           "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+           "cd /data/tradestation-community-mcp && ./venv/bin/python server.py"
          ]
        }
      }

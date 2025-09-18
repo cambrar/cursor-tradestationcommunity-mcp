@@ -191,7 +191,7 @@ echo '{
       "args": [
         "-i", "/path/to/your-key.pem",
         "ec2-user@YOUR_EC2_IP",
-        "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+        "cd /data/tradestation-community-mcp && ./venv/bin/python server.py"
       ]
     }
   }
