@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "tradestation-community": {
+      "command": "python",
+      "args": ["server.py"],
+      "cwd": "/Users/rcambra/personal/Cursor/cursor-tradestationcommunity-mcp"
+    }
+  }
+}
