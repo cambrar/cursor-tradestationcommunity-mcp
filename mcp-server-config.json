@@ -1,9 +1,28 @@
 {
   "mcpServers": {
-    "tradestation-community": {
+    "tradestation-community-local": {
       "command": "python",
       "args": ["server.py"],
-      "cwd": "/Users/rcambra/personal/Cursor/cursor-tradestationcommunity-mcp"
+      "cwd": "/path/to/your/cursor-tradestationcommunity-mcp",
+      "env": {
+        "PYTHONPATH": "/path/to/your/cursor-tradestationcommunity-mcp/venv/lib/python3.9/site-packages"
+      }
+    },
+    "tradestation-community-ec2": {
+      "command": "ssh",
+      "args": [
+        "-i", "/path/to/your-key.pem",
+        "ec2-user@your-ec2-ip",
+        "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+      ]
+    },
+    "tradestation-community-ec2-systemd": {
+      "command": "ssh",
+      "args": [
+        "-i", "/path/to/your-key.pem", 
+        "ec2-user@your-ec2-ip",
+        "sudo systemctl start tradestation-community-mcp && sudo journalctl -u tradestation-community-mcp -f"
+      ]
     }
   }
 }

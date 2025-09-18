@@ -99,16 +99,128 @@ cd /opt/tradestation-community-mcp  # or your install directory
 ./venv/bin/python server.py
 ```
 
-## Usage in Cursor
+## Cursor Integration
 
-Once the MCP server is running, you can use these tools in Cursor:
+### Configure MCP Server in Cursor
 
-### 1. Login
+1. **Open Cursor Settings**
+   - Press `Cmd+,` (Mac) or `Ctrl+,` (Windows/Linux)
+   - Go to "Extensions" → "MCP Servers"
+
+2. **Add TradeStation Community Server**
+   
+   **For Local Development:**
+   ```json
+   {
+     "mcpServers": {
+       "tradestation-community": {
+         "command": "python",
+         "args": ["server.py"],
+         "cwd": "/path/to/your/cursor-tradestationcommunity-mcp"
+       }
+     }
+   }
+   ```
+
+   **For Remote EC2 Server:**
+   ```json
+   {
+     "mcpServers": {
+       "tradestation-community": {
+         "command": "ssh",
+         "args": [
+           "your-ec2-user@your-ec2-ip",
+           "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+         ]
+       }
+     }
+   }
+   ```
+
+   **For Systemd Service (EC2):**
+   ```json
+   {
+     "mcpServers": {
+       "tradestation-community": {
+         "command": "ssh",
+         "args": [
+           "your-ec2-user@your-ec2-ip",
+           "sudo systemctl start tradestation-community-mcp && sudo journalctl -u tradestation-community-mcp -f"
+         ]
+       }
+     }
+   }
+   ```
+
+3. **Alternative: Use the provided config file**
+   ```bash
+   # Copy the provided config to Cursor's MCP settings
+   cp mcp-server-config.json ~/.cursor/mcp-servers.json
+   # Edit the file to match your setup
+   ```
+
+4. **Restart Cursor** to load the new MCP server configuration
+
+### EC2 Network & Security Configuration
+
+#### Security Group Configuration
+Your EC2 instance needs these **outbound** rules (no inbound rules required):
+
+```
+Outbound Rules:
+- Type: HTTPS
+  Protocol: TCP  
+  Port: 443
+  Destination: 0.0.0.0/0
+  Description: TradeStation Community HTTPS
+
+- Type: HTTP  
+  Protocol: TCP
+  Port: 80
+  Destination: 0.0.0.0/0
+  Description: HTTP redirect handling
+
+- Type: DNS (UDP)
+  Protocol: UDP
+  Port: 53  
+  Destination: 0.0.0.0/0
+  Description: DNS resolution
+```
+
+#### SSH Access (for remote MCP connection)
+If using SSH to connect Cursor to your EC2 MCP server:
+
+```
+Inbound Rules:
+- Type: SSH
+  Protocol: TCP
+  Port: 22
+  Source: YOUR_LOCAL_IP/32
+  Description: SSH access from your development machine
+```
+
+#### Network ACL (if using custom VPC)
+Ensure your subnet's Network ACL allows:
+- **Outbound**: HTTPS (443), HTTP (80), DNS (53)
+- **Inbound**: SSH (22) from your IP
+- **Inbound**: Ephemeral ports (32768-65535) for return traffic
+
+#### VPC Configuration
+- **Internet Gateway**: Required for outbound HTTPS to TradeStation
+- **Route Table**: Default route (0.0.0.0/0) to Internet Gateway
+- **DNS Resolution**: Enabled on VPC
+- **DNS Hostnames**: Enabled on VPC
+
+### Usage in Cursor
+
+Once the MCP server is configured and running:
+
+#### 1. Login
 ```
 Use the login tool with your TradeStation username and password
 ```
 
-### 2. Search Forum
+#### 2. Search Forum
 ```
 Search for specific topics, e.g.:
 - "API authentication issues"
@@ -116,9 +228,37 @@ Search for specific topics, e.g.:
 - "platform connectivity"
 ```
 
-### 3. Get Thread Content
+#### 3. Get Thread Content
 ```
 Retrieve full content of specific threads using their URLs
+```
+
+### Troubleshooting Connection
+
+#### Local Development Issues
+```bash
+# Check if server starts locally
+cd /path/to/cursor-tradestationcommunity-mcp
+source venv/bin/activate
+python server.py
+
+# Check MCP server logs in Cursor
+# Look for connection errors in Cursor's MCP panel
+```
+
+#### EC2 Connection Issues
+```bash
+# Test SSH connection
+ssh your-ec2-user@your-ec2-ip
+
+# Check if MCP server is running
+sudo systemctl status tradestation-community-mcp
+
+# Test outbound connectivity from EC2
+curl -I https://community.tradestation.com
+
+# Check security group rules
+aws ec2 describe-security-groups --group-ids sg-your-group-id
 ```
 
 ## Tools Available

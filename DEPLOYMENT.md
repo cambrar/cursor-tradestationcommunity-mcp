@@ -366,6 +366,117 @@ sudo systemctl start tradestation-community-mcp
 - Resource limits via systemd
 - Log rotation via journald
 
+## EC2 Setup Guide
+
+### Launch EC2 Instance
+
+1. **Choose AMI:**
+   - Amazon Linux 2023 (recommended) or Ubuntu 20.04+ LTS
+   - t3.micro or larger (512MB+ RAM recommended)
+
+2. **Configure Security Group:**
+   ```
+   Inbound Rules:
+   - SSH (22): Your IP/32
+   
+   Outbound Rules:
+   - HTTPS (443): 0.0.0.0/0 (TradeStation Community)
+   - HTTP (80): 0.0.0.0/0 (redirects)
+   - DNS (53): 0.0.0.0/0 (name resolution)
+   ```
+
+3. **VPC Configuration:**
+   - Attach to public subnet with Internet Gateway
+   - Enable DNS resolution and hostnames
+   - Default route (0.0.0.0/0) to Internet Gateway
+
+### Complete Setup Commands
+
+```bash
+# 1. Connect to your EC2 instance
+ssh -i your-key.pem ec2-user@your-ec2-ip  # Amazon Linux
+# or
+ssh -i your-key.pem ubuntu@your-ec2-ip    # Ubuntu
+
+# 2. Clone the repository
+git clone https://github.com/cambrar/cursor-tradestationcommunity-mcp.git
+cd cursor-tradestationcommunity-mcp
+
+# 3. Deploy (choose one option)
+sudo ./deploy.sh                    # Basic installation
+sudo ./deploy.sh --systemd          # With systemd service
+./deploy.sh --user                  # User installation
+
+# 4. Configure credentials
+sudo nano /opt/tradestation-community-mcp/.env  # System install
+# or
+nano ~/.local/share/tradestation-community-mcp/.env  # User install
+
+# Add your credentials:
+# TRADESTATION_USERNAME=your_username
+# TRADESTATION_PASSWORD=your_password
+
+# 5. Test the installation
+# For systemd service:
+sudo systemctl start tradestation-community-mcp
+sudo systemctl status tradestation-community-mcp
+
+# For manual execution:
+cd /opt/tradestation-community-mcp
+sudo -u mcp-server ./venv/bin/python server.py
+```
+
+### Cursor MCP Configuration
+
+Add to your Cursor MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "tradestation-community": {
+      "command": "ssh",
+      "args": [
+        "-i", "/path/to/your-key.pem",
+        "ec2-user@your-ec2-ip",
+        "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+      ]
+    }
+  }
+}
+```
+
+### Security Best Practices
+
+1. **SSH Key Management:**
+   ```bash
+   # Use SSH keys instead of passwords
+   # Restrict SSH access to your IP only
+   # Consider using SSH agent forwarding
+   ```
+
+2. **Security Group Hardening:**
+   ```bash
+   # Minimal inbound rules (only SSH from your IP)
+   # Specific outbound rules (only required ports)
+   # Regular security group audits
+   ```
+
+3. **System Updates:**
+   ```bash
+   # Amazon Linux 2023
+   sudo yum update -y
+   
+   # Ubuntu
+   sudo apt update && sudo apt upgrade -y
+   ```
+
+4. **Monitoring:**
+   ```bash
+   # Set up CloudWatch for system monitoring
+   # Monitor MCP server logs
+   # Set up alerts for service failures
+   ```
+
 ## Maintenance
 
 ### Regular Tasks
