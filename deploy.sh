@@ -137,18 +137,35 @@ install_system_deps() {
             # Amazon Linux 2023
             yum update -y
             
-            # Try to install Python 3.11 first (compatible with MCP), fallback to python3
+            # Install core packages first
+            yum install -y git wget systemd
+            
+            # Try to install Python 3.11 for MCP compatibility
+            log_info "Checking for Python 3.11 availability..."
             if yum list available python3.11 &> /dev/null; then
                 log_info "Installing Python 3.11 for MCP compatibility..."
-                yum install -y python3.11 python3.11-pip python3.11-devel git wget systemd
-                # Create symlinks for python3 if needed
-                if ! command -v python3 &> /dev/null || [[ "$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" < "3.10" ]]; then
-                    alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
-                    alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip3.11 1
+                yum install -y python3.11 python3.11-pip python3.11-devel
+                
+                # Set up alternatives to make python3.11 the default python3
+                log_info "Setting Python 3.11 as default python3..."
+                alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 50
+                alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip3.11 50
+                
+                # Also ensure python3.11 is directly available
+                if [[ ! -f /usr/bin/python3.11 ]]; then
+                    ln -sf /usr/local/bin/python3.11 /usr/bin/python3.11 2>/dev/null || true
                 fi
             else
-                log_warning "Python 3.11 not available, installing default python3"
-                yum install -y python3 python3-pip python3-devel git wget systemd
+                log_warning "Python 3.11 not available in repositories"
+                # Try to install from source or alternative repo
+                log_info "Attempting to install Python 3.11 from EPEL or build from source..."
+                
+                # Enable EPEL repository which might have newer Python
+                yum install -y epel-release || true
+                yum install -y python3.11 python3.11-pip python3.11-devel || {
+                    log_warning "Could not install Python 3.11, falling back to default python3"
+                    yum install -y python3 python3-pip python3-devel
+                }
             fi
             
             # Handle curl/curl-minimal conflict - only install if curl is not available
@@ -318,14 +335,30 @@ setup_venv() {
     
     VENV_DIR="$PROJECT_DIR/venv"
     
+    # Determine which Python to use
+    PYTHON_CMD="python3"
+    if command -v python3.11 &> /dev/null; then
+        PYTHON_CMD="python3.11"
+        log_info "Using Python 3.11 for virtual environment"
+    elif command -v python3.10 &> /dev/null; then
+        PYTHON_CMD="python3.10"
+        log_info "Using Python 3.10 for virtual environment"
+    else
+        log_info "Using default python3 for virtual environment"
+    fi
+    
+    # Verify Python version before creating venv
+    PYTHON_VERSION_CHECK=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    log_info "Creating virtual environment with Python $PYTHON_VERSION_CHECK"
+    
     # Create virtual environment if it doesn't exist
     if [[ ! -d "$VENV_DIR" ]]; then
         if [[ "$INSTALL_AS_USER" == "true" ]]; then
-            python3 -m venv "$VENV_DIR"
+            $PYTHON_CMD -m venv "$VENV_DIR"
         else
-            sudo -u "$SERVICE_USER" python3 -m venv "$VENV_DIR"
+            sudo -u "$SERVICE_USER" $PYTHON_CMD -m venv "$VENV_DIR"
         fi
-        log_success "Created virtual environment"
+        log_success "Created virtual environment with Python $PYTHON_VERSION_CHECK"
     else
         log_info "Virtual environment already exists"
     fi
