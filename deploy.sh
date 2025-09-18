@@ -136,8 +136,16 @@ install_system_deps() {
         "amzn")
             # Amazon Linux 2023
             yum update -y
-            # Install python3 and development tools (venv module is included in python3)
-            yum install -y python3 python3-pip python3-devel git curl wget systemd
+            # Install core packages first
+            yum install -y python3 python3-pip python3-devel git wget systemd
+            
+            # Handle curl/curl-minimal conflict - only install if curl is not available
+            if ! command -v curl &> /dev/null; then
+                log_info "Installing curl (replacing curl-minimal if present)..."
+                yum install -y --allowerasing curl
+            else
+                log_info "curl is already available"
+            fi
             ;;
         "ubuntu")
             # Ubuntu
