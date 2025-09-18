@@ -103,33 +103,48 @@ cd /opt/tradestation-community-mcp  # or your install directory
 
 ### Configure MCP Server in Cursor
 
-1. **Open Cursor Settings**
-   - Press `Cmd+,` (Mac) or `Ctrl+,` (Windows/Linux)
-   - Go to "Extensions" → "MCP Servers"
-
-2. **Add TradeStation Community Server**
+1. **Create MCP Configuration File**
    
+   Cursor uses a configuration file called `mcp.json`. Create it in one of these locations:
+   
+   **Global (all projects):**
+   ```bash
+   mkdir -p ~/.cursor
+   nano ~/.cursor/mcp.json
+   ```
+   
+   **Project-specific (current project only):**
+   ```bash
+   nano .cursor/mcp.json
+   ```
+
+2. **Add Server Configuration**
+
    **For Local Development:**
    ```json
    {
      "mcpServers": {
        "tradestation-community": {
-         "command": "python",
+         "command": "python3",
          "args": ["server.py"],
-         "cwd": "/path/to/your/cursor-tradestationcommunity-mcp"
+         "cwd": "/path/to/your/cursor-tradestationcommunity-mcp",
+         "env": {
+           "PYTHONPATH": "/path/to/your/cursor-tradestationcommunity-mcp/venv/lib/python3.9/site-packages"
+         }
        }
      }
    }
    ```
 
-   **For Remote EC2 Server:**
+   **For EC2 Server (SSH Connection):**
    ```json
    {
      "mcpServers": {
        "tradestation-community": {
          "command": "ssh",
          "args": [
-           "your-ec2-user@your-ec2-ip",
+           "-i", "/path/to/your-key.pem",
+           "ec2-user@your-ec2-ip",
            "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
          ]
        }
@@ -137,37 +152,93 @@ cd /opt/tradestation-community-mcp  # or your install directory
    }
    ```
 
-   **For Systemd Service (EC2):**
-   ```json
+3. **Important Notes about EC2 Connection**
+   
+   ⚠️ **Cursor connects TO your EC2 instance via SSH** - it doesn't expose any ports. Your EC2 needs:
+   
+   - **SSH access** from your development machine (port 22)
+   - **Outbound internet** access to TradeStation (ports 443, 80, 53)
+   - **NO inbound ports** needed for the MCP server itself
+   
+   The MCP server runs on EC2, and Cursor connects to it via SSH to execute commands.
+
+4. **Quick Setup Commands**
+   
+   **Copy and customize the provided config:**
+   ```bash
+   # Global configuration
+   mkdir -p ~/.cursor
+   cp mcp.json ~/.cursor/mcp.json
+   nano ~/.cursor/mcp.json  # Edit with your paths/IPs
+   
+   # Project-specific configuration
+   cp mcp.json .cursor/mcp.json
+   nano .cursor/mcp.json    # Edit with your paths/IPs
+   ```
+
+5. **Restart Cursor** 
+   
+   After creating/editing the `mcp.json` file, restart Cursor to load the configuration.
+
+6. **Verify Connection**
+   
+   - Open Cursor
+   - Look for MCP server status in the status bar or MCP panel
+   - Try using the TradeStation Community tools in a chat
+
+### Step-by-Step Example
+
+Here's a complete example for connecting Cursor to an EC2 instance:
+
+1. **Your EC2 setup:**
+   - Instance IP: `203.0.113.100`
+   - SSH Key: `~/aws-keys/my-ec2-key.pem`
+   - User: `ec2-user` (Amazon Linux)
+
+2. **Create the MCP config:**
+   ```bash
+   mkdir -p ~/.cursor
+   cat > ~/.cursor/mcp.json << 'EOF'
    {
      "mcpServers": {
        "tradestation-community": {
          "command": "ssh",
          "args": [
-           "your-ec2-user@your-ec2-ip",
-           "sudo systemctl start tradestation-community-mcp && sudo journalctl -u tradestation-community-mcp -f"
+           "-i", "/Users/yourname/aws-keys/my-ec2-key.pem",
+           "ec2-user@203.0.113.100",
+           "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
          ]
        }
      }
    }
+   EOF
    ```
 
-3. **Alternative: Use the provided config file**
+3. **Test the SSH connection first:**
    ```bash
-   # Copy the provided config to Cursor's MCP settings
-   cp mcp-server-config.json ~/.cursor/mcp-servers.json
-   # Edit the file to match your setup
+   ssh -i ~/aws-keys/my-ec2-key.pem ec2-user@203.0.113.100 "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py --help"
    ```
 
-4. **Restart Cursor** to load the new MCP server configuration
+4. **Restart Cursor and test:**
+   - Restart Cursor
+   - Open a chat
+   - Try asking: "Login to TradeStation Community with my credentials"
 
 ### EC2 Network & Security Configuration
 
 #### Security Group Configuration
-Your EC2 instance needs these **outbound** rules (no inbound rules required):
 
+**Inbound Rules (Required for Cursor SSH connection):**
 ```
-Outbound Rules:
+- Type: SSH
+  Protocol: TCP
+  Port: 22
+  Source: YOUR_LOCAL_IP/32
+  Description: SSH access from your development machine
+```
+
+**Outbound Rules (Required for TradeStation access):**
+```
 - Type: HTTPS
   Protocol: TCP  
   Port: 443
@@ -187,17 +258,7 @@ Outbound Rules:
   Description: DNS resolution
 ```
 
-#### SSH Access (for remote MCP connection)
-If using SSH to connect Cursor to your EC2 MCP server:
-
-```
-Inbound Rules:
-- Type: SSH
-  Protocol: TCP
-  Port: 22
-  Source: YOUR_LOCAL_IP/32
-  Description: SSH access from your development machine
-```
+**Important:** The MCP server itself doesn't need any inbound ports - Cursor connects via SSH and runs the server remotely.
 
 #### Network ACL (if using custom VPC)
 Ensure your subnet's Network ACL allows:

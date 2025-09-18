@@ -428,22 +428,38 @@ sudo -u mcp-server ./venv/bin/python server.py
 
 ### Cursor MCP Configuration
 
-Add to your Cursor MCP settings:
+1. **Create Cursor MCP configuration file:**
+   ```bash
+   # Global configuration (all projects)
+   mkdir -p ~/.cursor
+   nano ~/.cursor/mcp.json
+   
+   # OR project-specific configuration
+   nano .cursor/mcp.json
+   ```
 
-```json
-{
-  "mcpServers": {
-    "tradestation-community": {
-      "command": "ssh",
-      "args": [
-        "-i", "/path/to/your-key.pem",
-        "ec2-user@your-ec2-ip",
-        "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
-      ]
-    }
-  }
-}
-```
+2. **Add your server configuration:**
+   ```json
+   {
+     "mcpServers": {
+       "tradestation-community": {
+         "command": "ssh",
+         "args": [
+           "-i", "/path/to/your-key.pem",
+           "ec2-user@your-ec2-ip", 
+           "cd /opt/tradestation-community-mcp && ./venv/bin/python server.py"
+         ]
+       }
+     }
+   }
+   ```
+
+3. **Replace the placeholders:**
+   - `/path/to/your-key.pem`: Path to your EC2 SSH key
+   - `your-ec2-ip`: Your EC2 instance's public IP address
+   - `ec2-user`: EC2 username (use `ubuntu` for Ubuntu instances)
+
+4. **Restart Cursor** to load the new configuration
 
 ### Security Best Practices
 
