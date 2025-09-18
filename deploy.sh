@@ -146,10 +146,8 @@ install_system_deps() {
                 log_info "Installing Python 3.11 for MCP compatibility..."
                 yum install -y python3.11 python3.11-pip python3.11-devel
                 
-                # Set up alternatives to make python3.11 the default python3
-                log_info "Setting Python 3.11 as default python3..."
-                alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 50
-                alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip3.11 50
+                # Don't change system-wide python3 - we'll use python3.11 explicitly in venv
+                log_info "Python 3.11 installed (will be used only for this project's venv)"
                 
                 # Also ensure python3.11 is directly available
                 if [[ ! -f /usr/bin/python3.11 ]]; then
@@ -225,9 +223,16 @@ check_python_version() {
         fi
     fi
     
-    # Check if venv module is available
-    if ! python3 -m venv --help &> /dev/null; then
-        log_error "Python venv module is not available"
+    # Check if venv module is available (use the Python version we'll actually use)
+    VENV_PYTHON="python3"
+    if command -v python3.11 &> /dev/null; then
+        VENV_PYTHON="python3.11"
+    elif command -v python3.10 &> /dev/null; then
+        VENV_PYTHON="python3.10"
+    fi
+    
+    if ! $VENV_PYTHON -m venv --help &> /dev/null; then
+        log_error "Python venv module is not available for $VENV_PYTHON"
         case $OS in
             "amzn")
                 log_error "On Amazon Linux 2023, try: sudo yum install -y python3-devel"

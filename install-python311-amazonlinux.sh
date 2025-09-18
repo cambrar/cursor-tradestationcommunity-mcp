@@ -85,10 +85,9 @@ ln -sf /usr/local/bin/pip3.11 /usr/bin/pip3.11
 echo "/usr/local/lib" > /etc/ld.so.conf.d/python3.11.conf
 ldconfig
 
-# Set up alternatives
-log_info "Setting up alternatives..."
-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 50
-alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip3.11 50
+# Create symlinks but don't change system defaults
+log_info "Creating symlinks (keeping system python3 unchanged)..."
+# Just ensure python3.11 is available - don't change what python3 points to
 
 # Cleanup
 log_info "Cleaning up..."
@@ -105,5 +104,6 @@ python3.11 -m pip --version
 log_success "pip is working correctly"
 
 log_info "Python 3.11 installation completed!"
-log_info "You can now run: python3 --version (should show 3.11.x)"
-log_info "You can now run: pip3 --version (should use pip from Python 3.11)"
+log_info "Your existing python3 remains unchanged: $(python3 --version 2>&1)"
+log_info "Python 3.11 is available as: python3.11 --version (shows ${INSTALLED_VERSION})"
+log_info "The TradeStation MCP deployment will use python3.11 for its virtual environment only"
