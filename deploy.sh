@@ -356,7 +356,33 @@ setup_venv() {
     PYTHON_VERSION_CHECK=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
     log_info "Creating virtual environment with Python $PYTHON_VERSION_CHECK"
     
-    # Create virtual environment if it doesn't exist
+    # Check if existing venv uses the wrong Python version
+    RECREATE_VENV=false
+    if [[ -d "$VENV_DIR" ]]; then
+        # Check what Python version the existing venv uses
+        if [[ -f "$VENV_DIR/bin/python" ]]; then
+            EXISTING_VENV_VERSION=$("$VENV_DIR/bin/python" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "unknown")
+            log_info "Existing virtual environment uses Python $EXISTING_VENV_VERSION"
+            
+            # If existing venv uses Python < 3.10 but we have 3.10+ available, recreate it
+            if [[ "$EXISTING_VENV_VERSION" < "3.10" ]] && [[ "$PYTHON_VERSION_CHECK" >= "3.10" ]]; then
+                log_warning "Existing venv uses Python $EXISTING_VENV_VERSION but we need Python $PYTHON_VERSION_CHECK for MCP"
+                log_info "Recreating virtual environment with Python $PYTHON_VERSION_CHECK..."
+                RECREATE_VENV=true
+            fi
+        else
+            log_warning "Existing venv appears corrupted, recreating..."
+            RECREATE_VENV=true
+        fi
+    fi
+    
+    # Remove existing venv if we need to recreate it
+    if [[ "$RECREATE_VENV" == "true" ]]; then
+        log_info "Removing old virtual environment..."
+        rm -rf "$VENV_DIR"
+    fi
+    
+    # Create virtual environment if it doesn't exist or was removed
     if [[ ! -d "$VENV_DIR" ]]; then
         if [[ "$INSTALL_AS_USER" == "true" ]]; then
             $PYTHON_CMD -m venv "$VENV_DIR"
@@ -365,7 +391,7 @@ setup_venv() {
         fi
         log_success "Created virtual environment with Python $PYTHON_VERSION_CHECK"
     else
-        log_info "Virtual environment already exists"
+        log_info "Virtual environment already exists with correct Python version"
     fi
     
     # Upgrade pip and install requirements
