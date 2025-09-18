@@ -365,7 +365,13 @@ setup_venv() {
             log_info "Existing virtual environment uses Python $EXISTING_VENV_VERSION"
             
             # If existing venv uses Python < 3.10 but we have 3.10+ available, recreate it
-            if [[ "$EXISTING_VENV_VERSION" < "3.10" ]] && [[ "$PYTHON_VERSION_CHECK" >= "3.10" ]]; then
+            EXISTING_MAJOR=$(echo "$EXISTING_VENV_VERSION" | cut -d. -f1)
+            EXISTING_MINOR=$(echo "$EXISTING_VENV_VERSION" | cut -d. -f2)
+            TARGET_MAJOR=$(echo "$PYTHON_VERSION_CHECK" | cut -d. -f1)
+            TARGET_MINOR=$(echo "$PYTHON_VERSION_CHECK" | cut -d. -f2)
+            
+            # Check if existing version is < 3.10 and target version is >= 3.10
+            if [[ "$EXISTING_MAJOR" -eq 3 && "$EXISTING_MINOR" -lt 10 ]] && [[ "$TARGET_MAJOR" -eq 3 && "$TARGET_MINOR" -ge 10 ]]; then
                 log_warning "Existing venv uses Python $EXISTING_VENV_VERSION but we need Python $PYTHON_VERSION_CHECK for MCP"
                 log_info "Recreating virtual environment with Python $PYTHON_VERSION_CHECK..."
                 RECREATE_VENV=true
