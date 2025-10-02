@@ -27,6 +27,7 @@ from mcp.types import (
     ImageContent,
     EmbeddedResource,
 )
+from mcp import types
 
 # Load environment variables
 load_dotenv()
@@ -572,13 +573,19 @@ async def main():
     
     # Run the server
     async with stdio_server() as (read_stream, write_stream):
+        # Create proper notification options
+        notification_options = types.NotificationOptions()
+        
         await server.run(
             read_stream,
             write_stream,
             InitializationOptions(
                 server_name="tradestation-community",
                 server_version="1.0.0",
-                capabilities=server.get_capabilities(),
+                capabilities=server.get_capabilities(
+                    notification_options=notification_options,
+                    experimental_capabilities={},
+                ),
             ),
         )
 
