@@ -356,24 +356,24 @@ setup_venv() {
     PYTHON_VERSION_CHECK=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
     log_info "Creating virtual environment with Python $PYTHON_VERSION_CHECK"
     
-    # Check if existing venv uses the wrong Python version
+    # Always check if we need to recreate the venv
     RECREATE_VENV=false
+    
     if [[ -d "$VENV_DIR" ]]; then
         # Check what Python version the existing venv uses
         if [[ -f "$VENV_DIR/bin/python" ]]; then
             EXISTING_VENV_VERSION=$("$VENV_DIR/bin/python" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "unknown")
             log_info "Existing virtual environment uses Python $EXISTING_VENV_VERSION"
             
-            # If existing venv uses Python < 3.10 but we have 3.10+ available, recreate it
-            EXISTING_MAJOR=$(echo "$EXISTING_VENV_VERSION" | cut -d. -f1)
-            EXISTING_MINOR=$(echo "$EXISTING_VENV_VERSION" | cut -d. -f2)
-            TARGET_MAJOR=$(echo "$PYTHON_VERSION_CHECK" | cut -d. -f1)
-            TARGET_MINOR=$(echo "$PYTHON_VERSION_CHECK" | cut -d. -f2)
-            
-            # Check if existing version is < 3.10 and target version is >= 3.10
-            if [[ "$EXISTING_MAJOR" -eq 3 && "$EXISTING_MINOR" -lt 10 ]] && [[ "$TARGET_MAJOR" -eq 3 && "$TARGET_MINOR" -ge 10 ]]; then
-                log_warning "Existing venv uses Python $EXISTING_VENV_VERSION but we need Python $PYTHON_VERSION_CHECK for MCP"
-                log_info "Recreating virtual environment with Python $PYTHON_VERSION_CHECK..."
+            # Simple approach: if we're using python3.11 but venv is not 3.11, recreate it
+            if [[ "$PYTHON_CMD" == "python3.11" ]] && [[ "$EXISTING_VENV_VERSION" != "3.11" ]]; then
+                log_warning "Target Python is 3.11 but existing venv uses Python $EXISTING_VENV_VERSION"
+                RECREATE_VENV=true
+            elif [[ "$PYTHON_CMD" == "python3.10" ]] && [[ "$EXISTING_VENV_VERSION" != "3.10" ]]; then
+                log_warning "Target Python is 3.10 but existing venv uses Python $EXISTING_VENV_VERSION"
+                RECREATE_VENV=true
+            elif [[ "$EXISTING_VENV_VERSION" == "3.9" ]] && [[ "$PYTHON_VERSION_CHECK" != "3.9" ]]; then
+                log_warning "Existing venv uses Python 3.9 but we have Python $PYTHON_VERSION_CHECK available"
                 RECREATE_VENV=true
             fi
         else
@@ -386,6 +386,7 @@ setup_venv() {
     if [[ "$RECREATE_VENV" == "true" ]]; then
         log_info "Removing old virtual environment..."
         rm -rf "$VENV_DIR"
+        log_info "Will recreate with Python $PYTHON_VERSION_CHECK ($PYTHON_CMD)"
     fi
     
     # Create virtual environment if it doesn't exist or was removed
