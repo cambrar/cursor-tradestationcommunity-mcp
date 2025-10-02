@@ -26,8 +26,9 @@ from mcp.types import (
     TextContent,
     ImageContent,
     EmbeddedResource,
+    ServerCapabilities,
+    ToolsCapability,
 )
-from mcp import types
 
 # Load environment variables
 load_dotenv()
@@ -573,12 +574,18 @@ async def main():
     
     # Run the server
     async with stdio_server() as (read_stream, write_stream):
+        # Create server capabilities
+        capabilities = ServerCapabilities(
+            tools=ToolsCapability(),
+        )
+        
         await server.run(
             read_stream,
             write_stream,
             InitializationOptions(
                 server_name="tradestation-community",
                 server_version="1.0.0",
+                capabilities=capabilities,
             ),
         )
 
