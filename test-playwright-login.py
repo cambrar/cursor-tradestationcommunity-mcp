@@ -18,9 +18,9 @@ async def test_login():
     print(f"Password: {'*' * len(password)}")
     
     async with async_playwright() as p:
-        # Launch browser in non-headless mode to see what's happening
-        print("\nLaunching browser (headless=False to see what happens)...")
-        browser = await p.chromium.launch(headless=False)
+        # Launch browser in headless mode (required for EC2)
+        print("\nLaunching browser (headless mode for EC2)...")
+        browser = await p.chromium.launch(headless=True)
         context = await browser.new_context()
         page = await context.new_page()
         
@@ -58,9 +58,39 @@ async def test_login():
             except Exception as e:
                 print(f"  ✗ Error with {selector}: {e}")
         
-        # Wait to see the browser
-        print("\nBrowser will stay open for 10 seconds so you can see it...")
-        await asyncio.sleep(10)
+        # Try to fill in the form if we found the fields
+        print("\nAttempting to fill login form...")
+        try:
+            # Try to wait for the username field with a longer timeout
+            await page.wait_for_selector('#username', timeout=30000, state='visible')
+            await page.fill('#username', username)
+            await page.fill('#password', password)
+            print("✓ Filled in credentials")
+            
+            # Take screenshot before clicking
+            await page.screenshot(path='before_login.png')
+            print("Screenshot saved: before_login.png")
+            
+            # Click login
+            await page.click('#btn-login')
+            print("✓ Clicked login button")
+            
+            # Wait for navigation
+            await page.wait_for_url('**/Discussions/**', timeout=30000)
+            print(f"✓ Logged in! Current URL: {page.url}")
+            
+            # Take screenshot after login
+            await page.screenshot(path='after_login.png')
+            print("Screenshot saved: after_login.png")
+            
+            # Save cookies
+            cookies = await context.cookies()
+            print(f"\n✓ Got {len(cookies)} cookies:")
+            for cookie in cookies[:5]:
+                print(f"  - {cookie['name']}: {cookie['value'][:20]}...")
+                
+        except Exception as e:
+            print(f"\n✗ Login failed: {e}")
         
         await browser.close()
         print("\nTest complete. Check login_page.png and login_page.html")
