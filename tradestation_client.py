@@ -25,6 +25,7 @@ class TradeStationCommunityClient:
         self.search_url = f"{self.base_url}/Discussions/Search.aspx"
         self.logged_in = False
         self.cookies = {}
+        self.cookie_file = '/data/tradestation-community-mcp/.session_cookies.json'
         
         # Set headers to mimic a real browser
         self.session.headers.update({
@@ -34,6 +35,35 @@ class TradeStationCommunityClient:
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive',
         })
+        
+        # Try to load saved cookies
+        self._load_saved_cookies()
+    
+    def _load_saved_cookies(self):
+        """Load previously saved session cookies"""
+        try:
+            import json
+            if os.path.exists(self.cookie_file):
+                with open(self.cookie_file, 'r') as f:
+                    cookies = json.load(f)
+                
+                for cookie in cookies:
+                    self.session.cookies.set(
+                        cookie['name'],
+                        cookie['value'],
+                        domain=cookie.get('domain', ''),
+                        path=cookie.get('path', '/')
+                    )
+                
+                # Verify cookies work
+                response = self.session.get(f"{self.forum_url}?Forum_ID=213")
+                if 'signin.tradestation.com' not in response.url:
+                    self.logged_in = True
+                    logger.info(f"Loaded {len(cookies)} saved cookies - session is active")
+                else:
+                    logger.warning("Saved cookies are expired - need to re-authenticate")
+        except Exception as e:
+            logger.debug(f"Could not load saved cookies: {e}")
     
     async def login(self, username: str, password: str, headless: bool = True) -> bool:
         """Login to TradeStation Community using Playwright for OAuth"""
@@ -46,11 +76,31 @@ class TradeStationCommunityClient:
                 
                 logger.info("Opening TradeStation Community forum...")
                 # Navigate to the forum which will redirect to login
-                await page.goto(f"{self.forum_url}?Forum_ID=213", wait_until='networkidle', timeout=30000)
+                await page.goto(f"{self.forum_url}?Forum_ID=213", wait_until='networkidle', timeout=60000)
+                
+                # Check for AWS WAF CAPTCHA
+                logger.info("Checking for CAPTCHA challenge...")
+                captcha_present = await page.query_selector('.amzn-captcha-verify-button')
+                
+                if captcha_present:
+                    logger.warning("AWS WAF CAPTCHA detected - attempting to solve...")
+                    try:
+                        # Click the Begin button
+                        await page.click('.amzn-captcha-verify-button')
+                        logger.info("Clicked CAPTCHA begin button")
+                        
+                        # Wait for CAPTCHA to be solved (this might take some time)
+                        # The page should reload after CAPTCHA is solved
+                        await page.wait_for_url('**/login?**', timeout=60000)
+                        logger.info("CAPTCHA challenge passed")
+                    except Exception as e:
+                        logger.error(f"Failed to handle CAPTCHA: {e}")
+                        logger.error("AWS WAF CAPTCHA cannot be solved automatically")
+                        raise Exception("CAPTCHA challenge detected - automated login not possible")
                 
                 # Wait for login page to load
                 logger.info("Waiting for login page...")
-                await page.wait_for_selector('#username', timeout=10000)
+                await page.wait_for_selector('#username', timeout=30000)
                 
                 # Fill in credentials
                 logger.info("Entering credentials...")
