@@ -293,8 +293,14 @@ copy_application_files() {
     
     # Copy application files
     cp "$SCRIPT_DIR/server.py" "$PROJECT_DIR/"
+    cp "$SCRIPT_DIR/tradestation_client.py" "$PROJECT_DIR/"
     cp "$SCRIPT_DIR/requirements.txt" "$PROJECT_DIR/"
     cp "$SCRIPT_DIR/README.md" "$PROJECT_DIR/"
+    cp "$SCRIPT_DIR/start-mcp.sh" "$PROJECT_DIR/"
+    
+    # Copy utility scripts if they exist
+    [[ -f "$SCRIPT_DIR/install-playwright.sh" ]] && cp "$SCRIPT_DIR/install-playwright.sh" "$PROJECT_DIR/"
+    [[ -f "$SCRIPT_DIR/fix-venv.sh" ]] && cp "$SCRIPT_DIR/fix-venv.sh" "$PROJECT_DIR/"
     
     # Always update .env.example with latest template
     if [[ -f "$SCRIPT_DIR/env.example" ]]; then
