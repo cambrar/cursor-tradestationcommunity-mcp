@@ -11,7 +11,7 @@ from urllib.parse import urljoin, urlparse, parse_qs
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, Page, Browser
+from playwright.async_api import async_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -35,39 +35,39 @@ class TradeStationCommunityClient:
             'Connection': 'keep-alive',
         })
     
-    def login(self, username: str, password: str, headless: bool = True) -> bool:
+    async def login(self, username: str, password: str, headless: bool = True) -> bool:
         """Login to TradeStation Community using Playwright for OAuth"""
         try:
-            with sync_playwright() as p:
+            async with async_playwright() as p:
                 # Launch browser
-                browser = p.chromium.launch(headless=headless)
-                context = browser.new_context()
-                page = context.new_page()
+                browser = await p.chromium.launch(headless=headless)
+                context = await browser.new_context()
+                page = await context.new_page()
                 
                 logger.info("Opening TradeStation Community forum...")
                 # Navigate to the forum which will redirect to login
-                page.goto(f"{self.forum_url}?Forum_ID=213", wait_until='networkidle', timeout=30000)
+                await page.goto(f"{self.forum_url}?Forum_ID=213", wait_until='networkidle', timeout=30000)
                 
                 # Wait for login page to load
                 logger.info("Waiting for login page...")
-                page.wait_for_selector('#username', timeout=10000)
+                await page.wait_for_selector('#username', timeout=10000)
                 
                 # Fill in credentials
                 logger.info("Entering credentials...")
-                page.fill('#username', username)
-                page.fill('#password', password)
+                await page.fill('#username', username)
+                await page.fill('#password', password)
                 
                 # Click login button
                 logger.info("Submitting login...")
-                page.click('#btn-login')
+                await page.click('#btn-login')
                 
                 # Wait for redirect back to forum
                 logger.info("Waiting for authentication...")
-                page.wait_for_url('**/Discussions/**', timeout=30000)
+                await page.wait_for_url('**/Discussions/**', timeout=30000)
                 
                 # Extract cookies from browser
                 logger.info("Extracting session cookies...")
-                cookies = context.cookies()
+                cookies = await context.cookies()
                 
                 # Convert cookies to requests format
                 for cookie in cookies:
@@ -79,7 +79,7 @@ class TradeStationCommunityClient:
                     )
                     self.cookies[cookie['name']] = cookie['value']
                 
-                browser.close()
+                await browser.close()
                 
                 # Verify we can access the forum
                 logger.info("Verifying forum access...")

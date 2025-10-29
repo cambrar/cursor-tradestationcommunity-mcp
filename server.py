@@ -115,7 +115,7 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
                 text="Error: Username and password are required"
             )]
         
-        success = client.login(username, password)
+        success = await client.login(username, password)
         
         if success:
             return [TextContent(
@@ -233,7 +233,7 @@ async def main():
     # Auto-login if credentials are provided
     if username and password:
         logger.info("Auto-logging in with provided credentials...")
-        success = client.login(username, password)
+        success = await client.login(username, password)
         if success:
             logger.info("Auto-login successful")
         else:
