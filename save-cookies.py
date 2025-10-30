@@ -42,32 +42,66 @@ async def save_cookies():
         print("5. Then come back here and press Enter")
         print("\n" + "=" * 80)
         
-        input("\nPress Enter after you've successfully logged in...")
+        print("\nWaiting for you to login...")
+        print("After logging in, wait 5 seconds for the page to fully load,")
+        print("then press Enter here...")
+        input()
         
-        # Get current URL
+        # Give extra time for any redirects/Ajax
+        print("\nWaiting for page to stabilize...")
+        await asyncio.sleep(3)
+        
+        # Get current URL and check page content
         current_url = page.url
-        print(f"\nCurrent URL: {current_url}")
+        page_title = await page.title()
+        page_content = await page.content()
         
-        if 'Discussions' in current_url or 'Forum.aspx' in current_url:
-            print("✓ Looks like you're logged in!")
+        print(f"\nCurrent URL: {current_url}")
+        print(f"Page title: {page_title}")
+        
+        # Check for forum-related content in the page
+        is_forum_page = any(marker in page_content.lower() for marker in [
+            'forum.aspx', 'discussions', 'topic', 'thread', 'my forum subscriptions',
+            'most recent forum posts', 'quick forum search'
+        ])
+        
+        if is_forum_page or 'Discussions' in current_url or 'Forum.aspx' in current_url:
+            print("✓ Detected forum page content - you're logged in!")
             
-            # Extract cookies
+            # Extract cookies from ALL domains
             cookies = await context.cookies()
-            print(f"\nExtracted {len(cookies)} cookies")
+            print(f"\nExtracted {len(cookies)} cookies from:")
+            
+            domains = set(cookie.get('domain', '') for cookie in cookies)
+            for domain in sorted(domains):
+                domain_cookies = [c for c in cookies if c.get('domain') == domain]
+                print(f"  - {domain}: {len(domain_cookies)} cookies")
             
             # Save cookies to file
-            cookie_file = '/data/tradestation-community-mcp/.session_cookies.json'
+            cookie_file = '.session_cookies.json'
             with open(cookie_file, 'w') as f:
                 json.dump(cookies, f, indent=2)
             
             print(f"\n✓ Cookies saved to: {cookie_file}")
-            print("\nThese cookies will be used for automated forum access.")
-            print("They will expire eventually and you'll need to run this script again.")
+            print("\nNow copy this file to your EC2 instance:")
+            print(f"  scp {cookie_file} mcp-server@35.87.167.11:/data/tradestation-community-mcp/")
             
         else:
-            print("✗ Doesn't look like you're logged in yet")
+            print("✗ Doesn't look like you're on the forum page yet")
             print(f"  Current URL: {current_url}")
-            print("\nPlease try again")
+            print(f"  Page title: {page_title}")
+            print("\nIf you ARE logged in, the cookies were still saved.")
+            print("Check the browser window to see what page you're on.")
+            
+            # Save cookies anyway
+            cookies = await context.cookies()
+            cookie_file = '.session_cookies.json'
+            with open(cookie_file, 'w') as f:
+                json.dump(cookies, f, indent=2)
+            print(f"\n✓ Cookies saved to: {cookie_file} (just in case)")
+        
+        print("\nClosing browser in 5 seconds...")
+        await asyncio.sleep(5)
         
         await browser.close()
 
