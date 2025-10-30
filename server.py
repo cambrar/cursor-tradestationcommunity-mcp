@@ -230,14 +230,19 @@ async def main():
     username = os.getenv('TRADESTATION_USERNAME')
     password = os.getenv('TRADESTATION_PASSWORD')
     
-    # Auto-login if credentials are provided
-    if username and password:
-        logger.info("Auto-logging in with provided credentials...")
+    # Check if already authenticated via saved cookies
+    if client.logged_in:
+        logger.info("Already authenticated via saved cookies")
+    elif username and password:
+        logger.info("Attempting Playwright-based login with provided credentials...")
+        logger.warning("Note: This requires solving CAPTCHA - consider using save-cookies.py instead")
         success = await client.login(username, password)
         if success:
             logger.info("Auto-login successful")
         else:
-            logger.warning("Auto-login failed")
+            logger.warning("Auto-login failed - use save-cookies.py to manually authenticate")
+    else:
+        logger.warning("No authentication available - provide credentials in .env or run save-cookies.py")
     
     # Run the server
     async with stdio_server() as (read_stream, write_stream):
