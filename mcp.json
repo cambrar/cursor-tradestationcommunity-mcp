@@ -11,9 +11,10 @@
     "tradestation-community-ec2": {
       "command": "ssh",
       "args": [
+        "-T",
         "-i", "/path/to/your-key.pem",
-        "ec2-user@your-ec2-ip",
-        "cd /data/tradestation-community-mcp && ./venv/bin/python server.py"
+        "mcp-server@your-ec2-ip",
+        "cd /data/tradestation-community-mcp && exec ./venv/bin/python server.py"
       ]
     },
     "tradestation-community-ec2-systemd": {

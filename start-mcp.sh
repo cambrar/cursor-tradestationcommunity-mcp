@@ -3,4 +3,5 @@
 # This ensures the correct paths are used on the EC2 instance
 
 cd /data/tradestation-community-mcp
-exec ./venv/bin/python server.py
+# Use -u for unbuffered output (important for stdio communication)
+exec ./venv/bin/python -u server.py
