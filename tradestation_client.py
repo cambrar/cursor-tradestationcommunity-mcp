@@ -203,38 +203,50 @@ class TradeStationCommunityClient:
     def _extract_thread_from_row(self, row) -> Optional[Dict[str, Any]]:
         """Extract thread information from a table row"""
         try:
-            # Find the topic link
-            topic_link = row.find('a', href=re.compile(r'Topic', re.I))
+            # Get all cells
+            cells = row.find_all('td')
             
+            # Skip rows that don't have the right number of cells
+            if len(cells) < 8:
+                return None
+            
+            # Cell 1 contains the topic title and link
+            title_cell = cells[1] if len(cells) > 1 else None
+            if not title_cell:
+                return None
+            
+            # Find the topic link in the title cell
+            topic_link = title_cell.find('a', href=re.compile(r'Topic', re.I))
             if not topic_link:
                 return None
             
             title = topic_link.get_text(strip=True)
+            if not title or len(title) < 3:
+                return None
+            
             url = urljoin(self.base_url, topic_link.get('href', ''))
             
-            # Find author
-            author_cell = row.find('td', class_=re.compile(r'author|poster', re.I))
-            author = author_cell.get_text(strip=True) if author_cell else ""
+            # Cell 2 contains author
+            author = cells[2].get_text(strip=True) if len(cells) > 2 else ""
             
-            # Find date
-            date_cell = row.find('td', class_=re.compile(r'date|time|posted', re.I))
-            date = date_cell.get_text(strip=True) if date_cell else ""
+            # Cell 3 contains category (can be used as content preview)
+            category = cells[3].get_text(strip=True) if len(cells) > 3 else ""
             
-            # Get all cells for potential preview
-            cells = row.find_all('td')
-            content = ""
-            for cell in cells:
-                text = cell.get_text(strip=True)
-                if len(text) > 50 and text != title:
-                    content = text[:500]
-                    break
+            # Cell 8 contains last post date
+            date = cells[8].get_text(strip=True) if len(cells) > 8 else ""
+            # Clean up the date (remove "by:" and author info)
+            date = date.split('by:')[0].strip() if 'by:' in date else date
+            
+            # Get preview from the title attribute if available
+            preview = topic_link.get('title', '')[:500] if topic_link.get('title') else category
             
             return {
                 'title': title,
-                'content': content,
+                'content': preview,
                 'author': author,
                 'date': date,
-                'url': url
+                'url': url,
+                'category': category
             }
             
         except Exception as e:
@@ -256,43 +268,36 @@ class TradeStationCommunityClient:
             
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Find all thread links
-            topic_links = soup.find_all('a', href=re.compile(r'Topic', re.I))
+            # Find all thread rows (not just links)
+            # Look for rows with class tbl_TR_White which contain the threads
+            thread_rows = soup.find_all('tr', class_='tbl_TR_White')
             
-            logger.info(f"Found {len(topic_links)} topic links on forum page")
+            logger.info(f"Found {len(thread_rows)} thread rows on forum page")
             
             results = []
             query_lower = query.lower()
             
-            for link in topic_links:
-                title = link.get_text(strip=True)
+            for row in thread_rows:
+                # Extract thread info using our method
+                thread_info = self._extract_thread_from_row(row)
                 
-                # Filter by query
-                if query_lower in title.lower():
-                    url = urljoin(self.base_url, link.get('href', ''))
-                    
-                    # Try to get context from parent row
-                    parent_row = link.find_parent('tr')
-                    author = ""
-                    date = ""
-                    
-                    if parent_row:
-                        cells = parent_row.find_all('td')
-                        if len(cells) > 1:
-                            author = cells[1].get_text(strip=True) if len(cells) > 1 else ""
-                            date = cells[-1].get_text(strip=True) if len(cells) > 2 else ""
-                    
-                    results.append({
-                        'title': title,
-                        'content': '',
-                        'author': author,
-                        'date': date,
-                        'url': url
-                    })
+                if not thread_info:
+                    continue
+                
+                # Filter by query - check title, content, or category
+                title_lower = thread_info.get('title', '').lower()
+                content_lower = thread_info.get('content', '').lower()
+                category_lower = thread_info.get('category', '').lower()
+                
+                if (query_lower in title_lower or 
+                    query_lower in content_lower or
+                    query_lower in category_lower):
+                    results.append(thread_info)
                     
                     if len(results) >= limit:
                         break
             
+            logger.info(f"Filtered to {len(results)} matching threads")
             return results
             
         except Exception as e:
